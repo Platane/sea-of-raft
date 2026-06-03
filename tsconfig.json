@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "ES2024", "DOM.Iterable"],
+    "target": "ES2024",
+    "strict": true,
+    "noEmit": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node", "bun"],
+  },
+  "exclude": ["node_modules"],
+}
