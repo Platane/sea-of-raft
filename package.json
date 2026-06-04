@@ -4,6 +4,12 @@
   "private": true,
   "description": "..",
   "repository": "github:platane/sea-of-raft",
+  "scripts": {
+    "type": "tsc",
+    "lint": "oxfmt",
+    "dev": "bun ./dev.ts",
+    "build": "bun build src/index.html --outdir dist"
+  },
   "dependencies": {
     "gl-matrix": "3.4.4"
   },
@@ -12,11 +18,5 @@
     "@types/node": "25.9.1",
     "oxfmt": "0.53.0",
     "typescript": "6.0.3"
-  },
-  "scripts": {
-    "type": "tsc",
-    "lint": "oxfmt",
-    "dev": "bun ./dev.ts",
-    "build": "bun build src/index.html --outdir dist"
   }
 }

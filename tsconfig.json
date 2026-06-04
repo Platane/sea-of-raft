@@ -6,7 +6,7 @@
     "noEmit": true,
     "module": "preserve",
     "moduleResolution": "bundler",
-    "types": ["node", "bun"],
+    "types": ["node", "bun"]
   },
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules"]
 }

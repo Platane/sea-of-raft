@@ -1,8 +1,7 @@
 import { mat4, vec4 } from "gl-matrix";
-import { createProgram } from "./utils";
-
 import spriteFragmentShaderCode from "./sprite/shader.frag" with { type: "text" };
 import spriteVertexShaderCode from "./sprite/shader.vert" with { type: "text" };
+import { createProgram } from "./utils";
 
 const MAX_ENTITIES = 1024;
 
@@ -52,13 +51,13 @@ export const createRenderer = (
       gl.ARRAY_BUFFER,
       // interleaved position and texCoord
       new Float32Array([
-        -1, 1, 0, 1,
+        -1, 1, 0, 0,
 
-        -1, -1, 0, 0,
+        -1, -1, 0, 1,
 
-        1, 1, 1, 1,
+        1, 1, 1, 0,
 
-        1, -1, 1, 0,
+        1, -1, 1, 1,
       ]),
       gl.STATIC_DRAW,
     );
@@ -125,13 +124,7 @@ export const createRenderer = (
     gl.bufferData(gl.UNIFORM_BUFFER, cameraUBOArray, gl.DYNAMIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, spriteEntitiesBuffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      spriteEntitiesData,
-      gl.DYNAMIC_DRAW,
-      0,
-      entities.count * 20,
-    );
+    gl.bufferData(gl.ARRAY_BUFFER, spriteEntitiesData, gl.DYNAMIC_DRAW, 0, entities.count * 20);
 
     gl.useProgram(spriteProgram);
 
