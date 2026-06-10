@@ -1,47 +1,45 @@
 import { mat4 } from "gl-matrix";
-import { createWorldRenderer } from "./worldRenderer";
+import { createState } from "./engine";
+import { reduceAnimation } from "./engine/systems/animation";
+import { createReducerNodes } from "./engine/systems/reduceNodes";
+import { updateEntities } from "./engine/systems/rendererEntities";
+import { heartBeatReduce } from "./nodes/heartBeat";
+import { createRenderer } from "./renderer";
 import { getSpriteSheet } from "./worldRenderer/sprites";
 
 // import "./scripts/generateTileSet";
 
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
 
-const renderer = createWorldRenderer(canvas, {
-  spriteSheet: await getSpriteSheet(),
+const renderer = createRenderer(canvas, {
+	spriteSheet: await getSpriteSheet(),
 });
 
 mat4.lookAt(renderer.viewMatrix, [1, 5, 10], [0, 0, 0], [0, 1, 0]);
 
 window.onresize = () =>
-  renderer.resize(window.innerWidth, window.innerHeight, Math.min(window.devicePixelRatio ?? 1, 2));
+	renderer.resize(
+		window.innerWidth,
+		window.innerHeight,
+		Math.min(window.devicePixelRatio ?? 1, 2),
+	);
 (window as any).onresize();
 
-let t = 0;
+let state = createState(3);
+const reduceNodes = createReducerNodes(heartBeatReduce);
 
-const state = {
-  nodes: [
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: false, mailbox: [] },
-    { dead: false, hat: true, mailbox: [] },
-    { dead: true, hat: true, mailbox: [] },
-  ],
-  inbound: Array.from({ length: 100 }).map((_, i, { length }) => ({
-    sender: 0,
-    receiver: 1,
-    message: 0,
-    k: i / (length - 1),
-  })),
-};
+(window as any).__state = state;
 
 const loop = () => {
-  t++;
+	state.date++;
+	state = reduceAnimation(state);
 
-  renderer.draw(state, t);
+	if (state.date % 60 === 0)
+		state = reduceNodes(state as any, { type: "tic-nodes" });
 
-  requestAnimationFrame(loop);
+	updateEntities(state, renderer.entities);
+	renderer.draw();
+
+	requestAnimationFrame(loop);
 };
 loop();
