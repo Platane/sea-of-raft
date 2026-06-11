@@ -6,6 +6,7 @@ import { updateEntities } from "./engine/systems/rendererEntities";
 import { heartBeatReduce } from "./nodes/heartBeat";
 import { createRenderer } from "./renderer";
 import { getSpriteSheet } from "./worldRenderer/sprites";
+import { hotPotatoReduce } from "./nodes/hotPotato";
 
 // import "./scripts/generateTileSet";
 
@@ -23,7 +24,12 @@ window.onresize = () =>
 (window as any).onresize();
 
 let state = createState(3);
-const reduceNodes = createReducerNodes(heartBeatReduce);
+const reduceNodes = createReducerNodes(
+  hotPotatoReduce,
+  // heartBeatReduce,
+
+  //
+);
 
 (window as any).__state = state;
 
@@ -42,7 +48,14 @@ const loop = () => {
     2,
   );
 
-  updateEntities(state, renderer.entities);
+  mat4.lookAt(
+    renderer.viewMatrix,
+    [Math.sin(Date.now() / 5000) * 10, 5, Math.cos(Date.now() / 5000) * 10],
+    [0, 0, 0],
+    [0, 1, 0],
+  );
+
+  updateEntities(state, renderer.entities, renderer.viewMatrix);
   renderer.draw();
 
   requestAnimationFrame(loop);

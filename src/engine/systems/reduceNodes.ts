@@ -16,7 +16,7 @@ export const createReducerNodes =
   ): State<Message, EphemeralSpace, DiskSpace> => {
     switch (action.type) {
       case "tic-nodes": {
-        const peers = state.nodes.map((_, i) => i + 1);
+        const peers = state.nodes.map((_, i) => i);
 
         for (let i = 0; i < state.nodes.length; i++) {
           const node = state.nodes[i];
@@ -58,7 +58,12 @@ export const createReducerNodes =
           for (const m of outBox) {
             state.inFlightMessages.push({
               ...m,
-              position: node.outBoxPosition,
+              position: [
+                node.outBoxPosition[0] + (Math.random() - 0.5) * 0.2,
+                node.outBoxPosition[1] + (Math.random() - 0.5) * 0.2,
+              ],
+              velocity: [0, 0],
+
               sender: i,
               sendDate: state.date,
             });

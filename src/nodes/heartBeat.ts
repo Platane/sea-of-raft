@@ -1,4 +1,4 @@
-import { ReduceNode } from "../engine/systems/reduceNodes";
+import type { ReduceNode } from "../engine/systems/reduceNodes";
 
 export const heartBeatReduce: ReduceNode<
   "ping" | "pong",

@@ -1,4 +1,4 @@
-export type Vec2 = ArrayLike<number>;
+export type Vec2 = [number, number];
 
 export type ID = number;
 
@@ -13,9 +13,10 @@ export type State<
     inBoxPosition: Vec2;
     inBoxDirection: Vec2;
     outBoxPosition: Vec2;
+    outBoxDirection: Vec2;
     diskSpace: DiskSpace;
     ephemeralSpace: EphemeralSpace;
-    inBox: { message: Message; sender: ID }[];
+    inBox: { message: Message; sender: ID; position?: Vec2; velocity?: Vec2 }[];
     hasHat?: boolean;
     dead?: { recoverDate: number };
     isolated?: { recoverDate: number };
@@ -26,6 +27,7 @@ export type State<
     receiver: ID;
     sendDate: number;
     position: Vec2;
+    velocity: Vec2;
   }[];
   dropMessages: {
     message: Message;
