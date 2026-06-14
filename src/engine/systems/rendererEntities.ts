@@ -19,12 +19,6 @@ export const updateEntities = (
 
   let i = 0;
 
-  // origin
-  vec4.copy(entities.items[i].spriteBox, boxes.pirates[0]);
-  mat4.identity(entities.items[i].transform);
-
-  i++;
-
   for (let k = 0; k < state.nodes.length; k++) {
     const node = state.nodes[k];
     const [ox, oz] = node.position;
