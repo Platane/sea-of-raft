@@ -6,6 +6,7 @@ const server = serve({
   routes: {
     "/": app,
   },
+  development: { hmr: false },
 });
 
 console.log(`Listening on ${server.url}`);

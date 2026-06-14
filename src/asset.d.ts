@@ -1,4 +1,8 @@
 declare module "*.css";
+declare module "*.module.css" {
+  const styles: Record<string, string>;
+  export default styles;
+}
 declare module "*.png";
 declare module "*.vert" {
   const src: string;
