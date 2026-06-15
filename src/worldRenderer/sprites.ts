@@ -1,15 +1,3 @@
-import tileSetUrl from "../assets/tileset.png";
-
-export const loadImage = (src: string) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-
-export const getSpriteSheet = () => loadImage(tileSetUrl);
-
 export const boxes = {
   hat: [0, 0, 0.19047619047619047, 0.23880597014925373],
   pirates: [

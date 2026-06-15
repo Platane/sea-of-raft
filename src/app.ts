@@ -5,18 +5,20 @@ import { Action as NodeAction, createReducerNodes } from "./engine/systems/reduc
 import { updateEntities } from "./engine/systems/rendererEntities";
 import { heartBeatReduce } from "./nodes/heartBeat";
 import { createRenderer } from "./renderer";
-import { getSpriteSheet } from "./worldRenderer/sprites";
 import { hotPotatoReduce } from "./nodes/hotPotato";
 import { createTimeline } from "./ui/timeline";
 import { createReplayer } from "./replayer";
+import { loadImage } from "./utils/image";
 
-// import "./scripts/generateTileSet";
+import tileSetUrl from "./assets/tileset.png";
+
+import "./scripts/generateTileSet";
 
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
 const domLogs = document.getElementById("logs") as HTMLElement;
 
 const renderer = createRenderer(canvas, {
-  spriteSheet: await getSpriteSheet(),
+  spriteSheet: await loadImage(tileSetUrl),
 });
 
 mat4.lookAt(renderer.viewMatrix, [1, 5, 10], [0, 0, 0], [0, 1, 0]);
@@ -59,15 +61,13 @@ let r: ReturnType<typeof replayer> = {
 };
 
 let paused = false;
-let seeking = false;
+let seeking = false as false | { target: number; finish: boolean };
 
-timeline.onSeek = (t) => {
-  seeking = true;
-  r = replayer(r, { type: "seek", index: t });
+timeline.onSeek = (target) => {
+  seeking = { target, finish: false };
 };
-timeline.onFinishSeek = (t) => {
-  seeking = false;
-  r = replayer(r, { type: "seek", index: t });
+timeline.onFinishSeek = (target) => {
+  seeking = { target, finish: true };
 };
 timeline.onResume = () => {
   paused = false;
@@ -76,10 +76,10 @@ timeline.onPause = () => {
   paused = true;
 };
 timeline.onNext = () => {
-  r = replayer(r, { type: "seek", index: r.index + 1 });
+  seeking = { target: r.index + 1, finish: true };
 };
 timeline.onPrev = () => {
-  r = replayer(r, { type: "seek", index: Math.max(0, r.index - 1) });
+  seeking = { target: r.index - 1, finish: true };
 };
 
 const loop = () => {
@@ -92,6 +92,10 @@ const loop = () => {
         r = replayer(r, { type: "tic-nodes" });
       }
     }
+  }
+  if (seeking) {
+    r = replayer(r, { type: "seek", index: seeking.target });
+    if (seeking.finish) seeking = false;
   }
 
   domLogs.innerText = JSON.stringify(

@@ -1,115 +1,97 @@
-import spriteSheetUrl from "../assets/pirates.png";
+import { loadImage } from "../utils/image";
 
-const source = await new Promise<HTMLImageElement>((resolve, reject) => {
-  const img = new Image();
-  img.onload = () => resolve(img);
-  img.onerror = reject;
-  img.src = spriteSheetUrl;
-});
+import pirateSheetUrl from "../assets/pirates.png";
+import bottleSheetUrl from "../assets/blue-potions.png";
 
-const sourcesBoxes = {
-  hat: [0, 3 / 16],
-  pirates: [
-    [2, 1],
-    [3, 1],
-    [4, 1],
-    [5, 1],
+const spritesheet = [
+  {
+    image: await loadImage(pirateSheetUrl),
 
-    [1, 4],
-    [2, 4],
-    [3, 4],
-    [4, 4],
-    [5, 4],
+    hat: [0, 3 / 16],
 
-    [1, 5],
-    [2, 5],
-    [3, 5],
-    [4, 5],
-    [5, 5],
-  ],
-  coin: [0, 2],
-  skeleton: [1, 1],
-  raft: [1, 10],
-  raft2: [7, 6],
-  beer: [0, 4],
-};
+    pirate1: [2, 1],
+    pirate2: [3, 1],
+    pirate3: [4, 1],
+    pirate4: [5, 1],
 
-const TILE_SIZE = 16;
-const GAP = 1; // gap between tiles to prevent UV bleeding
+    pirate5: [1, 4],
+    pirate6: [2, 4],
+    pirate7: [3, 4],
+    pirate8: [4, 4],
+    pirate9: [5, 4],
 
-// flatten all named tiles into a linear list, preserving name and array index
-const flatSprites: Array<{
-  name: string;
-  index: number;
-  col: number;
-  row: number;
-}> = [];
+    pirate10: [1, 5],
+    pirate11: [2, 5],
+    pirate12: [3, 5],
+    pirate13: [4, 5],
+    pirate14: [5, 5],
 
-for (const [name, box] of Object.entries(sourcesBoxes)) {
-  if (Array.isArray(box[0])) {
-    for (let i = 0; i < (box as number[][]).length; i++) {
-      const [col, row] = (box as number[][])[i];
-      flatSprites.push({ name, index: i, col, row });
-    }
-  } else {
-    const [col, row] = box as number[];
-    flatSprites.push({ name, index: 0, col, row });
-  }
-}
+    // coin: [0, 2],
+    skeleton: [1, 1],
+    raft: [1, 10],
+    // raft2: [7, 6],
+    // beer: [0, 4],
+  },
+  {
+    image: await loadImage(bottleSheetUrl),
+
+    bottle: [3, 0],
+  },
+] as const;
+
+// first pass: count every sprite to derive the packed grid dimensions
+const spriteCount = spritesheet.reduce(
+  (sum: number, { image: _, ...boxes }) => sum + Object.keys(boxes).length,
+  0,
+);
 
 // pack into a square-ish grid
-const gridCols = Math.ceil(Math.sqrt(flatSprites.length));
-const gridRows = Math.ceil(flatSprites.length / gridCols);
+const w = Math.ceil(Math.sqrt(spriteCount));
+const h = Math.ceil(spriteCount / w);
 
-const CELL = TILE_SIZE + GAP;
+const GAP = 2; // gap between tiles to prevent UV bleeding
 
 const canvas = document.createElement("canvas");
-canvas.width = gridCols * CELL - GAP;
-canvas.height = gridRows * CELL - GAP;
+canvas.width = w * 16 + (w - 1) * GAP;
+canvas.height = h * 16 + (h - 1) * GAP;
 
 const ctx = canvas.getContext("2d")!;
 
-const destBoxes: Record<string, number[] | number[][]> = {};
+const destBoxes: Record<string, number[]> = {};
 
-for (let i = 0; i < flatSprites.length; i++) {
-  const { name, index, col, row } = flatSprites[i];
+// second pass: draw every sprite into its grid cell and record its UV box
+let i = 0;
+for (const { image, ...box } of spritesheet) {
+  for (const [name, [sx, sy]] of Object.entries(box)) {
+    const x = i % w;
+    const y = Math.floor(i / w);
 
-  const destCol = i % gridCols;
-  const destRow = Math.floor(i / gridCols);
+    const dx = x * (16 + GAP);
+    const dy = y * (16 + GAP);
 
-  const px = destCol * CELL;
-  const py = destRow * CELL;
+    ctx.drawImage(image, sx * 16, sy * 16, 16, 16, dx, dy, 16, 16);
 
-  ctx.drawImage(
-    source,
-    col * TILE_SIZE,
-    row * TILE_SIZE,
-    TILE_SIZE,
-    TILE_SIZE,
-    px,
-    py,
-    TILE_SIZE,
-    TILE_SIZE,
-  );
+    destBoxes[name] = [
+      dx / canvas.width,
+      dy / canvas.height,
+      (dx + 16) / canvas.width,
+      (dy + 16) / canvas.height,
+    ];
 
-  const u0 = px / canvas.width;
-  const v0 = py / canvas.height;
-  const u1 = (px + TILE_SIZE) / canvas.width;
-  const v1 = (py + TILE_SIZE) / canvas.height;
-
-  const original = sourcesBoxes[name as keyof typeof sourcesBoxes];
-  if (Array.isArray(original[0])) {
-    if (!destBoxes[name]) destBoxes[name] = [];
-    (destBoxes[name] as number[][])[index] = [u0, v0, u1, v1];
-  } else {
-    destBoxes[name] = [u0, v0, u1, v1];
+    i++;
   }
 }
+
+(destBoxes as any).pirates = Array.from({ length: 13 }, (_, i) => {
+  const a = destBoxes[`pirate${i + 1}`];
+  delete destBoxes[`pirate${i + 1}`];
+  return a;
+});
 
 console.log("destBoxes =", JSON.stringify(destBoxes, null, 2));
 
 document.body.appendChild(canvas);
-canvas.style = `position:fixed;top:0;right:0;border:solid 5px red; width:400px`;
+canvas.style = `position:fixed;top:0;right:0;border:solid 5px red; width:400px;image-rendering:pixelated`;
 
 // download the generated tileset
 canvas.toBlob((blob) => {
