@@ -1,8 +1,15 @@
-import type { State } from "./type";
+import { mat4 } from "gl-matrix";
+import { step as step_bottleLifeCycle } from "./systems/bottleLifeCycle/step";
+import { createStepper as createStepper_node } from "./systems/nodes/stepNode";
+import type { Scheduler } from "./systems/nodes/scheduler";
+import { UpdateNode } from "./systems/nodes/type";
+import { step as step_physics } from "./systems/physics/step";
+import { ID, World } from "./type";
 
-export const createState = (n: number): State => {
+export const createWorld = (n: number): World => {
   return {
     date: 1,
+    bottles: [],
     nodes: Array.from({ length: n }, (_, k) => {
       const RADIUS = 4;
       const a = (k / n) * Math.PI * 2;
@@ -17,18 +24,32 @@ export const createState = (n: number): State => {
         c * tangent[0] + s * outward[0],
         c * tangent[1] + s * outward[1],
       ];
+      // the queue anchor must sit outside the node's repulsion well, otherwise
+      // a bottle aimed at it can never settle there.
+      const INBOX_OFFSET = 1.35;
       return {
         position: [x, z],
-        inBoxPosition: [x + tangent[0] * 0.7, z + tangent[1] * 0.7],
-        inBoxDirection: queueDir,
-        outBoxPosition: [x + outward[0] * 0.8, z + outward[1] * 0.8],
-        outBoxDirection: outward,
-        diskSpace: {},
-        ephemeralSpace: {},
-        inBox: [],
+        storage: {},
+        inBoxQueue: {
+          position: [x + outward[0] * INBOX_OFFSET, z + outward[1] * INBOX_OFFSET],
+          direction: queueDir,
+        },
       };
     }),
-    inFlightMessages: [],
-    dropMessages: [],
+  };
+};
+
+export const createStepper = (
+  updateNode: UpdateNode,
+  scheduler: Scheduler<ID>,
+  viewMatrix: mat4,
+) => {
+  const step_node = createStepper_node(updateNode, scheduler);
+
+  return (world: World) => {
+    world.date++;
+    step_node(world);
+    step_bottleLifeCycle(world, viewMatrix);
+    step_physics(world);
   };
 };

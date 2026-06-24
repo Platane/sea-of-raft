@@ -1,21 +1,19 @@
 import { mat4 } from "gl-matrix";
-import { createState } from "./engine";
-import { reduceAnimation } from "./engine/systems/animation";
-import { Action as NodeAction, createReducerNodes } from "./engine/systems/reduceNodes";
-import { updateEntities } from "./engine/systems/rendererEntities";
-import { heartBeatReduce } from "./nodes/heartBeat";
 import { createRenderer } from "./renderer";
-import { hotPotatoReduce } from "./nodes/hotPotato";
 import { createTimeline } from "./ui/timeline";
-import { createReplayer } from "./replayer";
+import { createReplayer, type Replayer } from "./replayer";
 import { loadImage } from "./utils/image";
+import { tileSetUrl } from "./scripts/generateTileSet";
+import { createStepper, createWorld } from "./engine";
+import { staggered } from "./engine/systems/nodes/scheduler";
+import { updateNode_hotPotato } from "./engine/systems/nodes/algs/hotPotato";
+import type { UpdateNode } from "./engine/systems/nodes/type";
+import { ID, World } from "./engine/type";
+import { updateEntities } from "./engine/systems/rendererEntities";
 
-import tileSetUrl from "./assets/tileset.png";
-
-import "./scripts/generateTileSet";
+// import tileSetUrl from "./assets/tileset.png";
 
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
-const domLogs = document.getElementById("logs") as HTMLElement;
 
 const renderer = createRenderer(canvas, {
   spriteSheet: await loadImage(tileSetUrl),
@@ -39,22 +37,20 @@ timeline.domElement.id = "timeline";
 // machine
 //
 
-const reduceNodes = createReducerNodes(
-  hotPotatoReduce,
-  // heartBeatReduce,
-);
+export type Action =
+  | { type: "tic" }
+  | { type: "crash"; node: ID; duration: number }
+  | { type: "isolate"; node: ID; duration: number };
 
-const replayer = createReplayer(
-  (state: ReturnType<typeof createState>, action: NodeAction | { type: "tic-animation" }) => {
-    if (action.type === "tic-animation") {
-      state.date++;
-      return reduceAnimation(state);
-    }
-    return reduceNodes(state as any, action);
-  },
-);
-let r: ReturnType<typeof replayer> = {
-  state: createState(5),
+// an alg pins its own message/storage shape; erase it to the generic node
+// contract at the wiring boundary
+const step = createStepper(updateNode_hotPotato as UpdateNode, staggered, renderer.viewMatrix);
+const replayer = createReplayer<World, Action>((world, action) => {
+  if (action.type === "tic") step(world);
+  return world;
+});
+let r: Replayer<World, Action> = {
+  state: createWorld(5),
   index: 0,
   snapshots: [],
   actions: [],
@@ -87,10 +83,7 @@ const loop = () => {
     if (r.index < r.actions.length) {
       r = replayer(r, { type: "seek", index: r.index + 1 });
     } else {
-      r = replayer(r, { type: "tic-animation" });
-      if (r.state.date % 60 === 0) {
-        r = replayer(r, { type: "tic-nodes" });
-      }
+      r = replayer(r, { type: "tic" });
     }
   }
   if (seeking) {
@@ -98,18 +91,9 @@ const loop = () => {
     if (seeking.finish) seeking = false;
   }
 
-  domLogs.innerText = JSON.stringify(
-    {
-      date: r.state.date,
-      inFlightMessages: r.state.inFlightMessages.map((x) => x.message),
-    },
-    null,
-    2,
-  );
-
   mat4.lookAt(
     renderer.viewMatrix,
-    [Math.sin(Date.now() / 5000) * 10, 5, Math.cos(Date.now() / 5000) * 10],
+    [Math.sin(Date.now() / 5000) * 14, 8, Math.cos(Date.now() / 5000) * 14],
     [0, 0, 0],
     [0, 1, 0],
   );
@@ -118,7 +102,10 @@ const loop = () => {
     paused ? "paused" : "running",
     r.index,
     Math.max(2_000, r.actions.length),
-    r.actions.reduce((arr: number[], a, i) => (a.type === "tic-animation" ? arr : [...arr, i]), []),
+    r.actions
+      .map((action, index) => ({ action, index }))
+      .filter(({ action }) => action.type !== "tic")
+      .map(({ index }) => index),
   );
 
   updateEntities(r.state, renderer.entities, renderer.viewMatrix);

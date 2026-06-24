@@ -1,40 +1,39 @@
 export type Vec2 = [number, number];
+export type Vec3 = [number, number, number];
 
 export type ID = number;
 
-export type State<
-  Message = any,
-  EphemeralSpace extends Partial<any> = any,
-  DiskSpace extends Partial<any> = any,
-> = {
+export type World<Message = any, Storage extends Partial<any> = any> = {
   date: number;
-  nodes: {
+  nodes: (Node<Storage> & DisplayableNode)[];
+  bottles: Bottle<Message>[];
+};
+
+export type Node<Storage extends Partial<any> = any> = {
+  storage: Storage;
+  dead?: { stepBeforeRecovery: number };
+};
+
+export type DisplayableNode = {
+  position: Vec2;
+  inBoxQueue: {
     position: Vec2;
-    inBoxPosition: Vec2;
-    inBoxDirection: Vec2;
-    outBoxPosition: Vec2;
-    outBoxDirection: Vec2;
-    diskSpace: DiskSpace;
-    ephemeralSpace: EphemeralSpace;
-    inBox: { message: Message; sender: ID; position?: Vec2; velocity?: Vec2 }[];
-    hasHat?: boolean;
-    dead?: { recoverDate: number };
-    isolated?: { recoverDate: number };
-  }[];
-  inFlightMessages: {
-    message: Message;
-    sender: ID;
-    receiver: ID;
-    sendDate: number;
-    position: Vec2;
-    velocity: Vec2;
-  }[];
-  dropMessages: {
-    message: Message;
-    sender: ID;
-    receiver: ID;
-    sendDate: number;
-    dropDate: number;
-    position: Vec2;
-  }[];
+    direction: Vec2;
+  };
+};
+
+export type Bottle<Message = any> = {
+  message: Message;
+  sender: ID;
+  receiver: ID;
+
+  position: Vec3;
+  velocity: Vec3;
+  target: Vec3;
+
+  status:
+    | { type: "in-flight" }
+    | { type: "inbox-queue"; index: number }
+    | { type: "inbox-pop-animation" }
+    | { type: "outbox-animation" };
 };

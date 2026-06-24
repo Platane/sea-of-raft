@@ -12,9 +12,9 @@ const CAMERA_UBO_BINDING_POINT = 1;
  * sprite renderer
  *
  * usage:
- *   - fill the entities attributes
- *   - mutate viewMatrix
- *   - call draw
+ *   - caller fill the entities attributes
+ *   - caller mutate viewMatrix
+ *   - draw
  */
 export const createRenderer = (
   canvas: HTMLCanvasElement,
