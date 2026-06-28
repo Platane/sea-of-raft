@@ -66,7 +66,7 @@ export const updateEntities = (
     const [x, y, z] = bottle.position;
     vec4.copy(
       entities.items[i].spriteBox,
-      spriteBoxes[bottleSprites[hashInt(bottle.sender + 123456) % bottleSprites.length]],
+      spriteBoxes[bottleSprites[bottle.sender % bottleSprites.length]],
     );
     vec3.set(v, x, y, z);
     mat4.fromRotationTranslationScaleOrigin(entities.items[i].transform, qSprite, v, sBottle, o);

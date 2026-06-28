@@ -1,11 +1,18 @@
 import { World } from "../../type";
 
 // ported from the previous engine (see engine/systems/animation.ts).
-// the simulation lives in the XZ plane; y is left untouched (no gravity, fixed
-// deck height — nothing moves along y).
+// collisions / spring / repulsion all live in the XZ plane. y is handled
+// separately by a buoyancy phase: a damped spring toward the water surface
+// (y = 0) so a bottle born at hand height falls down and settles, no rebound.
 const F_friction = 0.3;
-const F_spring = 0.01;
-const SPRING_CAP = 0.05;
+const F_spring = 0.006;
+const SPRING_CAP = 0.03;
+
+// y axis "water": F_buoyancy pulls toward the surface (gravity when above,
+// Archimedes push when submerged), F_water_drag damps it. Overdamped so the
+// bottle eases down to y = 0 without bouncing.
+const F_buoyancy = 0.01;
+const F_water_drag = 0.2;
 
 const F_bottle_repulsion = 0.0005;
 const BOTTLE_SOFTENING = 0.2;
@@ -51,7 +58,8 @@ export const step = (world: World): void => {
       const ez = p[2] - otherBottle.position[2];
       const ll = Math.hypot(ex, ez) + EPS;
       const lc = ll + BOTTLE_SOFTENING;
-      const f = F_bottle_repulsion / (lc * lc);
+      const f =
+        (F_bottle_repulsion / (lc * lc)) * (bottle.status.type == "inbox-pop-animation" ? 0.2 : 1);
       ax += (ex / ll) * f;
       az += (ez / ll) * f;
     }
@@ -61,6 +69,7 @@ export const step = (world: World): void => {
       for (const raft of world.nodes) {
         const ex = p[0] - raft.position[0];
         const ez = p[2] - raft.position[1];
+        const ey = p[1];
         const ll = Math.hypot(ex, ez) + EPS;
         const lc = ll + RAFT_SOFTENING;
         const f = F_raft_repulsion / (lc * lc);
@@ -72,9 +81,27 @@ export const step = (world: World): void => {
     // ax -= p[0] * F_center;
     // az -= p[2] * F_center;
 
+    // y axis. while popping out of the inbox the bottle is being grabbed by a
+    // hand, so it leaves the water: no buoyancy, just the same friction + capped
+    // spring as the XZ plane, pulling it up toward the target (hand) height.
+    // otherwise it floats: a damped spring toward the water surface (y = 0).
+    let ay = 0;
+    if (bottle.status.type === "inbox-pop-animation") {
+      ay -= v[1] * F_friction;
+      const ddy = bottle.target[1] - p[1];
+      const lay = Math.abs(ddy) + EPS;
+      const fay = Math.min(lay * F_spring, SPRING_CAP);
+      ay += (ddy / lay) * fay;
+    } else {
+      ay -= p[1] * F_buoyancy;
+      ay -= v[1] * F_water_drag;
+    }
+
     v[0] += ax;
+    v[1] += ay;
     v[2] += az;
     p[0] += v[0];
+    p[1] += v[1];
     p[2] += v[2];
   }
 };

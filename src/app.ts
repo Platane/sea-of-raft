@@ -8,8 +8,9 @@ import { createStepper, createWorld } from "./engine";
 import { staggered } from "./engine/systems/nodes/scheduler";
 import { updateNode_hotPotato } from "./engine/systems/nodes/algs/hotPotato";
 import type { UpdateNode } from "./engine/systems/nodes/type";
-import { ID, World } from "./engine/type";
+import type { ID, World } from "./engine/type";
 import { updateEntities } from "./engine/systems/rendererEntities";
+import { createOrbitControl } from "./ui/orbitcontrol";
 
 // import tileSetUrl from "./assets/tileset.png";
 
@@ -19,8 +20,6 @@ const renderer = createRenderer(canvas, {
   spriteSheet: await loadImage(tileSetUrl),
 });
 
-mat4.lookAt(renderer.viewMatrix, [1, 5, 10], [0, 0, 0], [0, 1, 0]);
-
 window.onresize = () =>
   renderer.resize(window.innerWidth, window.innerHeight, Math.min(window.devicePixelRatio ?? 1, 2));
 (window as any).onresize();
@@ -28,6 +27,19 @@ window.onresize = () =>
 //
 // ui
 //
+{
+  const eye = [1, 5, 10];
+  const lookAt = [0, 0, 0];
+  const up = [0, 1, 0];
+  const update = () => mat4.lookAt(renderer.viewMatrix, eye, lookAt, up);
+  update();
+  createOrbitControl({ canvas }, { eye, lookAt }, update, {
+    minRadius: 6,
+    maxRadius: 24,
+    minPhi: Math.PI * 0.05,
+    maxPhi: Math.PI * 0.32,
+  });
+}
 
 const timeline = createTimeline();
 document.body.appendChild(timeline.domElement);
@@ -91,12 +103,12 @@ const loop = () => {
     if (seeking.finish) seeking = false;
   }
 
-  mat4.lookAt(
-    renderer.viewMatrix,
-    [Math.sin(Date.now() / 5000) * 14, 8, Math.cos(Date.now() / 5000) * 14],
-    [0, 0, 0],
-    [0, 1, 0],
-  );
+  // mat4.lookAt(
+  //   renderer.viewMatrix,
+  //   [Math.sin(Date.now() / 5000) * 14, 8, Math.cos(Date.now() / 5000) * 14],
+  //   [0, 0, 0],
+  //   [0, 1, 0],
+  // );
 
   timeline.update(
     paused ? "paused" : "running",

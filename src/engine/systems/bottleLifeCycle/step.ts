@@ -18,6 +18,7 @@ export const step = (world: World, viewMatrix: mat4): void => {
       const sender = world.nodes[bottle.sender];
       if (!sender) continue;
       bottle.position = handPosition(viewMatrix, sender.position);
+      bottle.velocity[1] = 0.2;
       bottle.status = { type: "in-flight" };
     }
 
@@ -47,7 +48,9 @@ export const step = (world: World, viewMatrix: mat4): void => {
 
       bottle.target = slotPosition(receiver, nextIndex);
 
-      if (vec3.sqrDist(bottle.position, bottle.target) <= 0.3 * 0.3)
+      // arrival is XZ-only: y is owned by the buoyancy phase (a bottle may
+      // still be bobbing toward the surface when it reaches its slot).
+      if (sqrDistXZ(bottle.position, bottle.target) <= 0.3 * 0.3)
         bottle.status = { type: "inbox-queue", index: nextIndex };
     }
 
@@ -66,14 +69,21 @@ export const step = (world: World, viewMatrix: mat4): void => {
       if (!receiver) continue;
       bottle.target = handPosition(viewMatrix, receiver.position);
 
-      if (vec3.sqrDist(bottle.position, bottle.target) <= 0.5 * 0.5) world.bottles.splice(i, 1);
+      if (sqrDistXZ(bottle.position, bottle.target) <= 0.3 * 0.3) world.bottles.splice(i, 1);
     }
   }
 };
 
+/** squared distance in the XZ plane (ignores y, owned by the buoyancy phase) */
+const sqrDistXZ = (a: Vec3, b: Vec3): number => {
+  const dx = a[0] - b[0];
+  const dz = a[2] - b[2];
+  return dx * dx + dz * dz;
+};
+
 const QUEUE_SPACING = 0.4;
 
-const HAND_OFFSET: Vec3 = [0.5, 0.5, -0.01];
+const HAND_OFFSET: Vec3 = [-0.5, 0.8, -0.01];
 
 /**
  * world-space position of a node's "hand", guessed from the sprite billboard.
@@ -91,12 +101,9 @@ const handPosition = (viewMatrix: mat4, [nx, nz]: Vec2): Vec3 => {
   vec3.normalize(right, vec3.set(right, viewMatrix[10], 0, -viewMatrix[2]));
   vec3.normalize(fwd, vec3.set(fwd, viewMatrix[2], 0, viewMatrix[10]));
 
-  // side pointing to 0,0: sign so that +right*sign points toward the origin
-  const sign = right[0] * nx + right[2] * nz <= 0 ? 1 : -1;
-
   const [ox, oy, oz] = HAND_OFFSET;
   const out: Vec3 = [nx, oy, nz];
-  vec3.scaleAndAdd(out, out, right, ox * sign);
+  vec3.scaleAndAdd(out, out, right, ox);
   vec3.scaleAndAdd(out, out, fwd, oz);
   return out;
 };

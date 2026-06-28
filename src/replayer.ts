@@ -30,6 +30,10 @@ export const createReplayer =
 
         while (r.index < target) {
           r.state = reduce(r.state, r.actions[r.index]);
+
+          // TODO, seek action should announce if it's final or not
+          // and if it's not final we should make it easier to seek the previous steps by keeping temporary snapshots
+
           r.index++;
         }
 
