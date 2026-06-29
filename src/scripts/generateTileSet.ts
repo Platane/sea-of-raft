@@ -13,7 +13,7 @@ const colorSwap =
     const canvas = document.createElement("canvas");
     canvas.width = 16 * swaps.length;
     canvas.height = 16;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
 
     swaps.forEach((swap, i) => {
       const dx = i * 16;

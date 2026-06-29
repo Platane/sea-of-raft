@@ -11,13 +11,28 @@ import type { UpdateNode } from "./engine/systems/nodes/type";
 import type { ID, World } from "./engine/type";
 import { updateEntities } from "./engine/systems/rendererEntities";
 import { createOrbitControl } from "./ui/orbitcontrol";
+import { createNoiseRenderer } from "./renderer/noise";
 
 // import tileSetUrl from "./assets/tileset.png";
+import waveUrl from "./assets/waves.png";
 
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
 
 const renderer = createRenderer(canvas, {
   spriteSheet: await loadImage(tileSetUrl),
+  wave: await loadImage(waveUrl),
+  noise: (() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 256;
+    document.body.appendChild(canvas);
+    canvas.style = `position:fixed;top:0;right:0;border:solid 5px red;width:100px`;
+    const gl = canvas.getContext("webgl2")!;
+    const noiseRenderer = createNoiseRenderer(gl);
+    noiseRenderer.draw({ resolution: [3, 3], offset: [0, 0] });
+    noiseRenderer.dispose();
+
+    return canvas;
+  })(),
 });
 
 window.onresize = () =>
@@ -36,8 +51,8 @@ window.onresize = () =>
   createOrbitControl({ canvas }, { eye, lookAt }, update, {
     minRadius: 6,
     maxRadius: 24,
-    minPhi: Math.PI * 0.05,
-    maxPhi: Math.PI * 0.32,
+    minPhi: Math.PI * 0.02,
+    maxPhi: Math.PI * 0.25,
   });
 }
 

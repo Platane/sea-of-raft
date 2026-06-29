@@ -1,12 +1,17 @@
 import { mat4, vec4 } from "gl-matrix";
 import spriteFragmentShaderCode from "./sprite/shader.frag" with { type: "text" };
 import spriteVertexShaderCode from "./sprite/shader.vert" with { type: "text" };
+import waveFragmentShaderCode from "./wave/shader.frag" with { type: "text" };
+import waveVertexShaderCode from "./wave/shader.vert" with { type: "text" };
 import { createProgram } from "./utils";
 
 const MAX_ENTITIES = 10_000;
 
-const SPRITE_SHEET_TEXTURE_INDEX = 0;
-const CAMERA_UBO_BINDING_POINT = 1;
+const UBO_BINDING_POINT_CAMERA = 1;
+
+const TEXTURE_INDEX_SPRITE_SHEET = 0;
+const TEXTURE_INDEX_WAVE = 1;
+const TEXTURE_INDEX_NOISE = 2;
 
 /**
  * sprite renderer
@@ -18,7 +23,7 @@ const CAMERA_UBO_BINDING_POINT = 1;
  */
 export const createRenderer = (
   canvas: HTMLCanvasElement,
-  { spriteSheet }: { spriteSheet: TexImageSource },
+  textureSources: { spriteSheet: TexImageSource; wave: TexImageSource; noise: TexImageSource },
 ) => {
   const gl = canvas.getContext("webgl2")!;
 
@@ -27,7 +32,7 @@ export const createRenderer = (
   const viewMatrix = new Float32Array(cameraUBOArray.buffer, 16 * 4, 16) as mat4;
   const cameraUBOBuffer = gl.createBuffer();
 
-  gl.bindBufferBase(gl.UNIFORM_BUFFER, CAMERA_UBO_BINDING_POINT, cameraUBOBuffer);
+  gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_CAMERA, cameraUBOBuffer);
   gl.bufferData(gl.UNIFORM_BUFFER, cameraUBOArray, gl.DYNAMIC_DRAW);
 
   const resize = (width: number, height: number, dpr: number) => {
@@ -45,7 +50,7 @@ export const createRenderer = (
   gl.uniformBlockBinding(
     spriteProgram,
     gl.getUniformBlockIndex(spriteProgram, "Camera"),
-    CAMERA_UBO_BINDING_POINT,
+    UBO_BINDING_POINT_CAMERA,
   );
 
   const spriteVao = gl.createVertexArray();
@@ -59,7 +64,7 @@ export const createRenderer = (
       gl.ARRAY_BUFFER,
       // interleaved position and texCoord
       new Float32Array([
-        -0.5, 0.5, -0, 0,
+        -0.5, 0.5, 0, 0,
 
         -0.5, -0.5, 0, 1,
 
@@ -110,14 +115,120 @@ export const createRenderer = (
   const spriteSheetLocation = gl.getUniformLocation(spriteProgram, "u_colorTexture");
   {
     const texture = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + SPRITE_SHEET_TEXTURE_INDEX);
+    gl.activeTexture(gl.TEXTURE0 + TEXTURE_INDEX_SPRITE_SHEET);
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, spriteSheet);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureSources.spriteSheet);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
+
+  //
+  //
+  //
+
+  const waveProgram = createProgram(gl, waveVertexShaderCode, waveFragmentShaderCode);
+
+  const waveLocation = gl.getUniformLocation(waveProgram, "u_waveTexture");
+  const noiseLocation = gl.getUniformLocation(waveProgram, "u_noiseTexture");
+
+  gl.uniformBlockBinding(
+    waveProgram,
+    gl.getUniformBlockIndex(waveProgram, "Camera"),
+    UBO_BINDING_POINT_CAMERA,
+  );
+
+  const waveVao = gl.createVertexArray();
+  gl.bindVertexArray(waveVao);
+  const WAVE_L = 512;
+  {
+    const S = 100;
+
+    const data = new Float32Array(
+      Array.from({ length: WAVE_L * WAVE_L }, (_, i) => {
+        const x = Math.floor(i / WAVE_L);
+        const y = i % WAVE_L;
+
+        // interleaved position and texCoord
+        return [
+          //
+          ((x + 0) / WAVE_L - 0.5) * S,
+          ((y + 0) / WAVE_L - 0.5) * S,
+          ((x + 0) / WAVE_L) * (S / 10),
+          ((y + 0) / WAVE_L) * (S / 10),
+
+          ((x + 1) / WAVE_L - 0.5) * S,
+          ((y + 0) / WAVE_L - 0.5) * S,
+          ((x + 1) / WAVE_L) * (S / 10),
+          ((y + 0) / WAVE_L) * (S / 10),
+
+          ((x + 1) / WAVE_L - 0.5) * S,
+          ((y + 1) / WAVE_L - 0.5) * S,
+          ((x + 1) / WAVE_L) * (S / 10),
+          ((y + 1) / WAVE_L) * (S / 10),
+
+          //
+
+          ((x + 0) / WAVE_L - 0.5) * S,
+          ((y + 0) / WAVE_L - 0.5) * S,
+          ((x + 0) / WAVE_L) * (S / 10),
+          ((y + 0) / WAVE_L) * (S / 10),
+
+          ((x + 1) / WAVE_L - 0.5) * S,
+          ((y + 1) / WAVE_L - 0.5) * S,
+          ((x + 1) / WAVE_L) * (S / 10),
+          ((y + 1) / WAVE_L) * (S / 10),
+
+          ((x + 0) / WAVE_L - 0.5) * S,
+          ((y + 1) / WAVE_L - 0.5) * S,
+          ((x + 0) / WAVE_L) * (S / 10),
+          ((y + 1) / WAVE_L) * (S / 10),
+        ];
+      }).flat(),
+    );
+
+    const gridBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
+
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+    const a_position = gl.getAttribLocation(waveProgram, "a_position");
+    const a_texCoord = gl.getAttribLocation(waveProgram, "a_texCoord");
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gridBuffer);
+    gl.enableVertexAttribArray(a_position);
+    gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 16, 0); // read interleaved data, each vertex have 16 bytes ( (2+2) * 4 bytes for float32 ), position offset is 0
+
+    gl.enableVertexAttribArray(a_texCoord);
+    gl.vertexAttribPointer(a_texCoord, 2, gl.FLOAT, false, 16, 8);
+  }
+
+  {
+    const texture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + TEXTURE_INDEX_WAVE);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureSources.wave);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  }
+
+  {
+    const texture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + TEXTURE_INDEX_NOISE);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, textureSources.noise);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  }
+
+  //
+  //
+  //
 
   gl.disable(gl.CULL_FACE);
 
@@ -128,18 +239,22 @@ export const createRenderer = (
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   const draw = () => {
-    gl.bindBufferBase(gl.UNIFORM_BUFFER, CAMERA_UBO_BINDING_POINT, cameraUBOBuffer);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_CAMERA, cameraUBOBuffer);
     gl.bufferData(gl.UNIFORM_BUFFER, cameraUBOArray, gl.DYNAMIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, spriteEntitiesBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, spriteEntitiesData, gl.DYNAMIC_DRAW, 0, entities.count * 20);
 
     gl.useProgram(spriteProgram);
-
-    gl.uniform1i(spriteSheetLocation, SPRITE_SHEET_TEXTURE_INDEX);
-
     gl.bindVertexArray(spriteVao);
+    gl.uniform1i(spriteSheetLocation, TEXTURE_INDEX_SPRITE_SHEET);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, entities.count);
+
+    gl.useProgram(waveProgram);
+    gl.bindVertexArray(waveVao);
+    gl.uniform1i(waveLocation, TEXTURE_INDEX_WAVE);
+    gl.uniform1i(noiseLocation, TEXTURE_INDEX_NOISE);
+    gl.drawArrays(gl.TRIANGLES, 0, WAVE_L * WAVE_L * 3 * 2);
   };
 
   return { resize, viewMatrix, entities, draw };
