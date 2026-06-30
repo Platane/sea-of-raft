@@ -8,7 +8,9 @@ out vec4 outColor;
 
 void main() {
     vec2 p = v_texCoord * u_resolution + u_offset;
-    vec2 period = vec2(0.0);
+    // tileable: psrdnoise wraps over `period`, matching it to the sampled
+    // domain so the baked texture repeats seamlessly
+    vec2 period = u_resolution;
     float alpha = 0.0;
     vec2 gradient;
 

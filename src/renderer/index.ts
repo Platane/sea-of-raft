@@ -1,4 +1,4 @@
-import { mat4, vec4 } from "gl-matrix";
+import { mat4, vec3, vec4 } from "gl-matrix";
 import spriteFragmentShaderCode from "./sprite/shader.frag" with { type: "text" };
 import spriteVertexShaderCode from "./sprite/shader.vert" with { type: "text" };
 import waveFragmentShaderCode from "./wave/shader.frag" with { type: "text" };
@@ -27,9 +27,12 @@ export const createRenderer = (
 ) => {
   const gl = canvas.getContext("webgl2")!;
 
-  const cameraUBOArray = new Float32Array(16 + 16);
+  const cameraUBOArray = new Float32Array(16 + 16 + 4);
   const projectionMatrix = new Float32Array(cameraUBOArray.buffer, 0, 16);
   const viewMatrix = new Float32Array(cameraUBOArray.buffer, 16 * 4, 16) as mat4;
+  const lightDirection = new Float32Array(cameraUBOArray.buffer, (16 + 16) * 4, 3) as vec3;
+  vec3.set(lightDirection, 1, 2, 0.5);
+  vec3.normalize(lightDirection, lightDirection);
   const cameraUBOBuffer = gl.createBuffer();
 
   gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_CAMERA, cameraUBOBuffer);
@@ -141,9 +144,9 @@ export const createRenderer = (
 
   const waveVao = gl.createVertexArray();
   gl.bindVertexArray(waveVao);
-  const WAVE_L = 512;
+  const WAVE_L = 256;
   {
-    const S = 100;
+    const S = 140;
 
     const data = new Float32Array(
       Array.from({ length: WAVE_L * WAVE_L }, (_, i) => {
@@ -238,6 +241,10 @@ export const createRenderer = (
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+  const updateTime = (t: number) => {
+    cameraUBOArray[16 + 16 + 3] = t;
+  };
+
   const draw = () => {
     gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_CAMERA, cameraUBOBuffer);
     gl.bufferData(gl.UNIFORM_BUFFER, cameraUBOArray, gl.DYNAMIC_DRAW);
@@ -255,7 +262,8 @@ export const createRenderer = (
     gl.uniform1i(waveLocation, TEXTURE_INDEX_WAVE);
     gl.uniform1i(noiseLocation, TEXTURE_INDEX_NOISE);
     gl.drawArrays(gl.TRIANGLES, 0, WAVE_L * WAVE_L * 3 * 2);
+    // gl.drawArrays(gl.LINES, 0, WAVE_L * WAVE_L * 3 * 2);
   };
 
-  return { resize, viewMatrix, entities, draw };
+  return { resize, viewMatrix, updateTime, entities, draw };
 };

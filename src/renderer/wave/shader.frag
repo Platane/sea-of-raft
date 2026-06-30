@@ -4,6 +4,15 @@ precision highp float;
 uniform sampler2D u_waveTexture;
 
 in vec2 v_texCoord;
+in vec3 v_normal;
+
+layout(std140) uniform Camera {
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    vec3 lightDirection;
+    float time;
+};
+
 out vec4 outColor;
 
 void main() {

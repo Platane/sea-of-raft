@@ -4,6 +4,8 @@ precision highp float;
 layout(std140) uniform Camera {
     mat4 projectionMatrix;
     mat4 viewMatrix;
+    vec3 lightDirection;
+    float time;
 };
 
 in vec2 a_position;

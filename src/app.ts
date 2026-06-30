@@ -12,6 +12,7 @@ import type { ID, World } from "./engine/type";
 import { updateEntities } from "./engine/systems/rendererEntities";
 import { createOrbitControl } from "./ui/orbitcontrol";
 import { createNoiseRenderer } from "./renderer/noise";
+import { setNoiseData } from "./sea/height";
 
 // import tileSetUrl from "./assets/tileset.png";
 import waveUrl from "./assets/waves.png";
@@ -23,12 +24,18 @@ const renderer = createRenderer(canvas, {
   wave: await loadImage(waveUrl),
   noise: (() => {
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 256;
-    document.body.appendChild(canvas);
-    canvas.style = `position:fixed;top:0;right:0;border:solid 5px red;width:100px`;
-    const gl = canvas.getContext("webgl2")!;
+    canvas.width = canvas.height = 512;
+    const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true })!;
     const noiseRenderer = createNoiseRenderer(gl);
-    noiseRenderer.draw({ resolution: [3, 3], offset: [0, 0] });
+    noiseRenderer.draw({ resolution: [4, 4], offset: [0, 0] });
+
+    const rgba = new Uint8Array(canvas.width * canvas.height * 4);
+    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+
+    const viewer = document.createElement("div");
+    viewer.style = `position:fixed;top:0;right:0;border:solid 5px red;width:200px;aspect-ratio:1;background:url(${canvas.toDataURL()});background-size:100px 100px;`;
+    document.body.appendChild(viewer);
+
     noiseRenderer.dispose();
 
     return canvas;
@@ -136,6 +143,7 @@ const loop = () => {
   );
 
   updateEntities(r.state, renderer.entities, renderer.viewMatrix);
+  renderer.updateTime(r.state.date);
   renderer.draw();
 
   requestAnimationFrame(loop);
