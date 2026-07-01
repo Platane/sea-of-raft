@@ -12,7 +12,6 @@ import type { ID, World } from "./engine/type";
 import { updateEntities } from "./engine/systems/rendererEntities";
 import { createOrbitControl } from "./ui/orbitcontrol";
 import { createNoiseRenderer } from "./renderer/noise";
-import { setNoiseData } from "./sea/height";
 
 // import tileSetUrl from "./assets/tileset.png";
 import waveUrl from "./assets/waves.png";
