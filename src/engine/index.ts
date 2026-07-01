@@ -42,6 +42,7 @@ export const createWorld = (n: number): World => {
 export const createStepper = (
   updateNode: UpdateNode,
   scheduler: Scheduler<ID>,
+  getHeight: (time: number, x: number, y: number) => number,
   viewMatrix: mat4,
 ) => {
   const step_node = createStepper_node(updateNode, scheduler);
@@ -50,6 +51,6 @@ export const createStepper = (
     world.date++;
     step_node(world);
     step_bottleLifeCycle(world, viewMatrix);
-    step_physics(world);
+    step_physics(world, getHeight);
   };
 };

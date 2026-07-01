@@ -11,7 +11,8 @@ const SPRING_CAP = 0.03;
 // y axis "water": F_buoyancy pulls toward the surface (gravity when above,
 // Archimedes push when submerged), F_water_drag damps it. Overdamped so the
 // bottle eases down to y = 0 without bouncing.
-const F_buoyancy = 0.01;
+const F_buoyancy = 0.2;
+const F_gravity = 0.01;
 const F_water_drag = 0.2;
 
 const F_bottle_repulsion = 0.0005;
@@ -31,7 +32,10 @@ const EPS = 1e-4;
  * index conventions: bottle position/velocity/target are Vec3 [x, y, z]
  * (plane = 0, 2; y untouched), while node.position is Vec2 [x, z] (plane = 0, 1).
  */
-export const step = (world: World): void => {
+export const step = (
+  world: World,
+  getSeaLevel: (time: number, x: number, y: number) => number,
+): void => {
   for (const bottle of world.bottles) {
     const p = bottle.position;
     const v = bottle.velocity;
@@ -69,7 +73,6 @@ export const step = (world: World): void => {
       for (const raft of world.nodes) {
         const ex = p[0] - raft.position[0];
         const ez = p[2] - raft.position[1];
-        const ey = p[1];
         const ll = Math.hypot(ex, ez) + EPS;
         const lc = ll + RAFT_SOFTENING;
         const f = F_raft_repulsion / (lc * lc);
@@ -84,7 +87,8 @@ export const step = (world: World): void => {
     // y axis. while popping out of the inbox the bottle is being grabbed by a
     // hand, so it leaves the water: no buoyancy, just the same friction + capped
     // spring as the XZ plane, pulling it up toward the target (hand) height.
-    // otherwise it floats: a damped spring toward the water surface (y = 0).
+    // otherwise it floats: gravity pulls it down, buoyancy pushes it up while
+    // submerged, settling at a draft below the local sea level.
     let ay = 0;
     if (bottle.status.type === "inbox-pop-animation") {
       //
@@ -96,8 +100,13 @@ export const step = (world: World): void => {
       const fay = Math.min(lay * F_spring, SPRING_CAP);
       ay += (ddy / lay) * fay;
     } else {
-      ay -= p[1] * F_buoyancy;
       ay -= v[1] * F_water_drag;
+      ay -= F_gravity;
+
+      const seaLevel = getSeaLevel(world.date, p[0], p[2]);
+      const depth = Math.max(0, seaLevel - p[1]);
+
+      ay += depth * F_buoyancy;
     }
 
     v[0] += ax;

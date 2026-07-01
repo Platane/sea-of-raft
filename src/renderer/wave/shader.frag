@@ -19,7 +19,9 @@ void main() {
     outColor = vec4(0.0, 0.5, 1.0, 1.0);
     outColor = vec4(v_texCoord, 0.0, 1.0);
     outColor = texture(u_waveTexture, v_texCoord);
-    if (outColor.a <= 0.0) {
-        discard;
-    }
+    outColor.r = outColor.a;
+    outColor.a = 1.0;
+    // if (outColor.a <= 0.0) {
+    //     discard;
+    // }
 }

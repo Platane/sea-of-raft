@@ -5,7 +5,10 @@ import waveFragmentShaderCode from "./wave/shader.frag" with { type: "text" };
 import waveVertexShaderCode from "./wave/shader.vert" with { type: "text" };
 import { createProgram } from "./utils";
 
-const MAX_ENTITIES = 10_000;
+export const WAVE_KERNEL_SIZE = 20;
+export const WAVE_WORLD_SIZE = 100;
+
+export const MAX_ENTITIES = 10_000;
 
 const UBO_BINDING_POINT_CAMERA = 1;
 
@@ -144,10 +147,8 @@ export const createRenderer = (
 
   const waveVao = gl.createVertexArray();
   gl.bindVertexArray(waveVao);
-  const WAVE_L = 256;
+  const WAVE_L = 512;
   {
-    const S = 140;
-
     const data = new Float32Array(
       Array.from({ length: WAVE_L * WAVE_L }, (_, i) => {
         const x = Math.floor(i / WAVE_L);
@@ -156,37 +157,37 @@ export const createRenderer = (
         // interleaved position and texCoord
         return [
           //
-          ((x + 0) / WAVE_L - 0.5) * S,
-          ((y + 0) / WAVE_L - 0.5) * S,
-          ((x + 0) / WAVE_L) * (S / 10),
-          ((y + 0) / WAVE_L) * (S / 10),
+          ((x + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
 
-          ((x + 1) / WAVE_L - 0.5) * S,
-          ((y + 0) / WAVE_L - 0.5) * S,
-          ((x + 1) / WAVE_L) * (S / 10),
-          ((y + 0) / WAVE_L) * (S / 10),
+          ((x + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
 
-          ((x + 1) / WAVE_L - 0.5) * S,
-          ((y + 1) / WAVE_L - 0.5) * S,
-          ((x + 1) / WAVE_L) * (S / 10),
-          ((y + 1) / WAVE_L) * (S / 10),
+          ((x + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
 
           //
 
-          ((x + 0) / WAVE_L - 0.5) * S,
-          ((y + 0) / WAVE_L - 0.5) * S,
-          ((x + 0) / WAVE_L) * (S / 10),
-          ((y + 0) / WAVE_L) * (S / 10),
+          ((x + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
 
-          ((x + 1) / WAVE_L - 0.5) * S,
-          ((y + 1) / WAVE_L - 0.5) * S,
-          ((x + 1) / WAVE_L) * (S / 10),
-          ((y + 1) / WAVE_L) * (S / 10),
+          ((x + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
 
-          ((x + 0) / WAVE_L - 0.5) * S,
-          ((y + 1) / WAVE_L - 0.5) * S,
-          ((x + 0) / WAVE_L) * (S / 10),
-          ((y + 1) / WAVE_L) * (S / 10),
+          ((x + 0) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((y + 1) / WAVE_L - 0.5) * WAVE_WORLD_SIZE,
+          ((x + 0) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
+          ((y + 1) / WAVE_L) * (WAVE_WORLD_SIZE / WAVE_KERNEL_SIZE),
         ];
       }).flat(),
     );
@@ -223,8 +224,8 @@ export const createRenderer = (
     gl.activeTexture(gl.TEXTURE0 + TEXTURE_INDEX_NOISE);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, textureSources.noise);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }

@@ -1,7 +1,6 @@
 import { mat4, quat, vec3, vec4 } from "gl-matrix";
 import { createRenderer } from "../../renderer";
 import { hashInt } from "../../utils/hash";
-// import { spriteBoxes } from "../../worldRenderer/sprites";
 import { World } from "../type";
 import { spriteBoxes, SpriteName } from "../../scripts/generateTileSet";
 
@@ -10,8 +9,6 @@ export const updateEntities = (
   entities: ReturnType<typeof createRenderer>["entities"],
   viewMatrix: mat4,
 ) => {
-  const t = state.date;
-
   // cylindrical billboard: extract Y angle from view matrix back-vector (col-major: [2], [10])
   quat.identity(qSprite);
   quat.rotateY(qSprite, qSprite, Math.atan2(viewMatrix[2], viewMatrix[10]));
@@ -23,7 +20,7 @@ export const updateEntities = (
   for (let k = 0; k < state.nodes.length; k++) {
     const node = state.nodes[k];
     const [ox, oz] = node.position;
-    const oy = Math.sin(t / 100 + hashInt(k)) * 0.1;
+    const oy = 0;
 
     // raft
     vec4.copy(entities.items[i].spriteBox, spriteBoxes.raft);

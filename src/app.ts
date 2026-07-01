@@ -15,30 +15,46 @@ import { createNoiseRenderer } from "./renderer/noise";
 
 // import tileSetUrl from "./assets/tileset.png";
 import waveUrl from "./assets/waves.png";
+import { createGetSeaLevel } from "./engine/systems/wave/seaLevel";
 
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
+
+const { noiseTexture, noiseImageData } = (() => {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 512;
+  const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true })!;
+  const noiseRenderer = createNoiseRenderer(gl);
+  noiseRenderer.draw({ resolution: [4, 4], offset: [0, 0] });
+
+  const rgba = new Uint8Array(canvas.width * canvas.height * 4);
+  gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+
+  // readPixels origin is bottom-left, but texImage2D(canvas) uploads with
+  // UNPACK_FLIP_Y_WEBGL = false (texel row 0 = canvas top row), so flip Y here
+  // to keep the CPU sea level aligned with the rendered noise texture.
+  const data = new Uint8Array(canvas.width * canvas.height);
+  for (let y = 0; y < canvas.height; y++)
+    for (let x = 0; x < canvas.width; x++)
+      data[x + y * canvas.width] = rgba[(x + (canvas.height - 1 - y) * canvas.width) * 4];
+
+  // const viewer = document.createElement("div");
+  // viewer.style = `position:fixed;top:0;right:0;border:solid 5px red;width:200px;aspect-ratio:1;background:url(${canvas.toDataURL()});background-size:100px 100px;`;
+  // document.body.appendChild(viewer);
+
+  noiseRenderer.dispose();
+
+  return {
+    noiseTexture: canvas,
+    noiseImageData: { data, width: canvas.width, height: canvas.height },
+  };
+})();
+
+const getSeaLevel = createGetSeaLevel(noiseImageData);
 
 const renderer = createRenderer(canvas, {
   spriteSheet: await loadImage(tileSetUrl),
   wave: await loadImage(waveUrl),
-  noise: (() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 512;
-    const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true })!;
-    const noiseRenderer = createNoiseRenderer(gl);
-    noiseRenderer.draw({ resolution: [4, 4], offset: [0, 0] });
-
-    const rgba = new Uint8Array(canvas.width * canvas.height * 4);
-    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-
-    const viewer = document.createElement("div");
-    viewer.style = `position:fixed;top:0;right:0;border:solid 5px red;width:200px;aspect-ratio:1;background:url(${canvas.toDataURL()});background-size:100px 100px;`;
-    document.body.appendChild(viewer);
-
-    noiseRenderer.dispose();
-
-    return canvas;
-  })(),
+  noise: noiseTexture,
 });
 
 window.onresize = () =>
@@ -77,7 +93,12 @@ export type Action =
 
 // an alg pins its own message/storage shape; erase it to the generic node
 // contract at the wiring boundary
-const step = createStepper(updateNode_hotPotato as UpdateNode, staggered, renderer.viewMatrix);
+const step = createStepper(
+  updateNode_hotPotato as UpdateNode,
+  staggered,
+  getSeaLevel,
+  renderer.viewMatrix,
+);
 const replayer = createReplayer<World, Action>((world, action) => {
   if (action.type === "tic") step(world);
   return world;
