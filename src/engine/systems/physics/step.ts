@@ -87,6 +87,9 @@ export const step = (world: World): void => {
     // otherwise it floats: a damped spring toward the water surface (y = 0).
     let ay = 0;
     if (bottle.status.type === "inbox-pop-animation") {
+      //
+      // TODO: better locomotion
+      // i dont like the bottle slowing down
       ay -= v[1] * F_friction;
       const ddy = bottle.target[1] - p[1];
       const lay = Math.abs(ddy) + EPS;
