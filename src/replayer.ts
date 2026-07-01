@@ -2,21 +2,33 @@ export type Replayer<S, A> = {
   state: S;
   index: number;
   actions: A[];
-  snapshots: { state: S; index: number }[];
+  snapshots: { state: S; index: number; tmp: boolean }[];
 };
 
-export type ReplayerAction<A> = { type: "seek"; index: number } | A;
+export type SeekAction = {
+  type: "seek";
+  index: number;
+  mightSeekMore?: boolean;
+};
+
+const SNAPSHOT_INTERVAL = 200;
+const SNAPSHOT_INTERVAL_WHILE_SEEKING = 20;
 
 export const createReplayer =
   <S, A extends { type: string }>(reduce: (state: S, action: A) => S) =>
-  (r: Replayer<S, A>, action: ReplayerAction<A>): Replayer<S, A> => {
-    if ((r.snapshots.at(-1)?.index ?? -Infinity) + 200 < r.index) {
-      r.snapshots.push({ state: structuredClone(r.state), index: r.index });
+  (r: Replayer<S, A>, action: A | SeekAction): Replayer<S, A> => {
+    const lastSnapshotIndex = r.snapshots.at(-1)?.index ?? -Infinity;
+    if (lastSnapshotIndex + SNAPSHOT_INTERVAL < r.index) {
+      r.snapshots.push({
+        state: structuredClone(r.state),
+        index: r.index,
+        tmp: false,
+      });
     }
 
     switch (action.type) {
       case "seek": {
-        const { index } = action as { type: "seek"; index: number };
+        const { index, mightSeekMore } = action as SeekAction;
         const target = Math.max(0, Math.min(index, r.actions.length));
 
         let si = 0;
@@ -30,11 +42,20 @@ export const createReplayer =
 
         while (r.index < target) {
           r.state = reduce(r.state, r.actions[r.index]);
-
-          // TODO, seek action should announce if it's final or not
-          // and if it's not final we should make it easier to seek the previous steps by keeping temporary snapshots
-
           r.index++;
+
+          if (mightSeekMore && r.snapshots[si].index + SNAPSHOT_INTERVAL_WHILE_SEEKING < r.index) {
+            si++;
+            r.snapshots.splice(si, 0, {
+              state: structuredClone(r.state),
+              index: r.index,
+              tmp: true,
+            });
+          }
+        }
+
+        if (!mightSeekMore) {
+          r.snapshots = r.snapshots.filter((s) => !s.tmp);
         }
 
         return r;
@@ -42,6 +63,8 @@ export const createReplayer =
 
       default: {
         const a = action as A;
+
+        // fork the history
         r.actions.length = r.index;
         r.actions.push(a);
         r.state = reduce(r.state, a);

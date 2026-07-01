@@ -120,7 +120,7 @@ const loop = () => {
     }
   }
   if (seeking) {
-    r = replayer(r, { type: "seek", index: seeking.target });
+    r = replayer(r, { type: "seek", index: seeking.target, mightSeekMore: true });
     if (seeking.finish) seeking = false;
   }
 
